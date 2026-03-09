@@ -1,0 +1,813 @@
+{
+  "name": "Resume Form Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resume-optimize",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3164efb7-cba5-458f-93d7-5545f08b00c8",
+      "name": "Resume Form Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "resume-optimize"
+    },
+    {
+      "parameters": {
+        "jsCode": "function fail(msg) { throw new Error(msg); }\n\nconst triggerItem = $items('Resume Form Webhook', 0, 0)[0]?.json || {};\nconst body = triggerItem.body && typeof triggerItem.body === 'object' ? triggerItem.body : triggerItem;\n\nconst jd = String(body.jd || '').trim();\nconst jt = String(body.jt || '').trim();\nconst company = String(body.company || '').trim();\nconst selectedResume = String(body.selectedResume || '').trim();\n\nif (!jd) fail('Missing required field: jd');\nif (!jt) fail('Missing required field: jt');\nif (!company) fail('Missing required field: company');\nif (!selectedResume) fail('Missing required field: selectedResume');\nif (!selectedResume.endsWith('.tex')) fail('selectedResume must be a .tex file name');\n\nreturn [{ json: { jd, jt, company, selectedResume } }];"
+      },
+      "id": "9b4cc8ba-1ed0-4ce7-9cba-d9c53773181b",
+      "name": "Parse Optimize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=cat /home/node/resumes/{{ $json.selectedResume }}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "0c459713-b874-4ec6-a27d-d0afd9bce227",
+      "name": "Get Base LaTex file output"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=### ROLE\nYou are a Senior Technical Recruiter and ATS Optimization Specialist at {{ $('Parse Optimize Input').item.json.company }}. Your goal is to maximize this resume’s ATS match score for the {{ $('Parse Optimize Input').item.json.jt }} position — WITHOUT fabricating any experience.\n\n---\n\n### PRIMARY OBJECTIVE\nMaximize ATS keyword match rate and semantic similarity to the Job Description while preserving factual accuracy.\n\n---\n\n### HARD CONSTRAINTS (NON-NEGOTIABLE)\n1. Do NOT invent:\n   - New skills\n   - New tools\n   - New experiences\n   - New titles\n   - New dates\n   - New certifications\n2. Only use information already present in the resume.\n3. You may:\n   - Reorder wording\n   - Strengthen phrasing\n   - Increase keyword density\n   - Mirror terminology from the JD\n   - Make achievements more explicit\n4. Every statement must remain factually supported by the original resume content.\n\n---\n\n### ATS OPTIMIZATION STRATEGY\n\n#### STEP 1 – Keyword Extraction\nFrom the Job Description:\n- Extract all technical skills\n- Extract required tools, frameworks, languages\n- Extract methodologies\n- Extract domain terms\n- Extract responsibility verbs\n- Classify them into:\n  - Tier 1 (Required / must-have)\n  - Tier 2 (Core responsibilities)\n  - Tier 3 (Preferred / soft skills)\n\n#### STEP 2 – Strategic Keyword Mirroring\nFor Tier 1 and Tier 2:\n- Use exact phrase matching where possible.\n- Naturally embed these phrases into bullet points.\n- Ensure important keywords appear:\n  - In multiple relevant bullets\n  - In context, not as keyword stuffing\n\n#### STEP 3 – Impact Amplification\nRewrite bullet points to:\n- Start with strong action verbs\n- Emphasize measurable outcomes\n- Clarify scale, ownership, and impact\n- Show technical depth\n\nIf metrics are implied but not stated, do NOT invent numbers.\nInstead:\n- Clarify scope (e.g., “enterprise-scale”, “cross-functional”, “production environment”)\n- Specify technical context\n\n#### STEP 4 – ATS Parser Safety\n- Avoid keyword stuffing.\n- Avoid unnatural repetition.\n- Keep bullets concise and scannable.\n- Maintain clean LaTeX formatting.\n- Escape all special characters properly.\n\n---\n\n### FORMATTING RULES (STRICT)\n- DO NOT alter any LaTeX structure.\n- DO NOT modify spacing commands.\n- DO NOT change layout.\n- Only rewrite text inside \\item bullet points.\n- Escape special characters properly.\n- Return a fully compilable LaTeX document.\n\n---\n\n### OUTPUT REQUIREMENTS\n- Return the complete LaTeX document from \\documentclass to \\end{document}.\n- No explanations.\n- No markdown.\n- No additional commentary.\n- No double-escaping backslashes.\n\n---\n\n### Resume to Optimize:\n{{ $json.stdout }}\n\n---\n\n### JOB DETAILS:\nJob Title: {{ $('Parse Optimize Input').item.json.jt }}\nCompany: {{ $('Parse Optimize Input').item.json.company }}\nJob Description: {{ $('Parse Optimize Input').item.json.jd }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "a5bbb64e-0fdb-4434-adff-352ccf252068",
+      "name": "GPT AI Call"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "responsesApiEnabled": false,
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        224
+      ],
+      "id": "bf546f33-1cd5-4b94-b788-efe0734feef6",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "lj6AEDO4pEq9JuZT",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"code\": \"\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        224
+      ],
+      "id": "58a46522-4292-4a06-aeb8-ae2f7b58b024",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "function extractDraft(item) {\n  if (typeof item.code === 'string') return item.code;\n  if (item.output && typeof item.output.code === 'string') return item.output.code;\n  if (typeof item.output === 'string') {\n    try {\n      const parsed = JSON.parse(item.output);\n      if (typeof parsed.code === 'string') return parsed.code;\n    } catch {}\n  }\n  if (typeof item.text === 'string') return item.text;\n  return '';\n}\n\nconst draftLatex = extractDraft($json).trim();\nif (!draftLatex) throw new Error('No draft LaTeX generated by GPT.');\n\nconst data = $('Parse Optimize Input').item.json;\nconst companyPath = data.company.replace(/\\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '_');\nconst jtPath = data.jt.replace(/\\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '_');\n\nreturn [{\n  json: {\n    success: true,\n    message: 'Draft generated. Review and edit before final save.',\n    selectedResume: data.selectedResume,\n    company: data.company,\n    jt: data.jt,\n    companyPath,\n    jtPath,\n    draftLatex\n  }\n}];"
+      },
+      "id": "5e164136-6aa4-4922-ba81-05e87252323d",
+      "name": "Build Draft Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "16b002d8-dcb7-4024-b319-5d5f29e6c1a5",
+      "name": "Respond Draft"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resume-preview",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "2a79c851-9a6a-4e1b-9ecf-aba9e0de504b",
+      "name": "Resume Preview Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        384
+      ],
+      "webhookId": "resume-preview"
+    },
+    {
+      "parameters": {
+        "jsCode": "function fail(msg) { throw new Error(msg); }\n\nconst triggerItem = $items('Resume Preview Webhook', 0, 0)[0]?.json || {};\nconst body = triggerItem.body && typeof triggerItem.body === 'object' ? triggerItem.body : triggerItem;\n\nconst company = String(body.company || '').trim();\nconst jt = String(body.jt || '').trim();\nconst latexContent = String(body.latexContent || '').trim();\n\nif (!company) fail('Missing required field: company');\nif (!jt) fail('Missing required field: jt');\nif (!latexContent) fail('Missing required field: latexContent');\n\nconst companyPath = company.replace(/\\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '_');\nconst jtPath = jt.replace(/\\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '_');\nconst outputDirectory = `/apps/${companyPath}/${jtPath}`;\nconst latexB64 = Buffer.from(latexContent, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    company,\n    jt,\n    companyPath,\n    jtPath,\n    outputDirectory,\n    latexB64\n  }\n}];"
+      },
+      "id": "b8957992-3c5c-4bf0-a978-d12ee4c313e1",
+      "name": "Parse Preview Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://docker-proxy:2375/containers/latex-compiler/exec",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"AttachStdout\": true,\n  \"AttachStderr\": true,\n  \"Cmd\": [\n    \"mkdir\",\n    \"-p\",\n    \"{{ $('Parse Preview Input').item.json.outputDirectory }}\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        384
+      ],
+      "id": "fbcf3705-0ba5-48eb-be85-b73a1c108974",
+      "name": "Create Preview Folder Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://docker-proxy:2375/exec/{{ $json.Id }}/start",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"Detach\": false,\n  \"Tty\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        384
+      ],
+      "id": "9928001d-144a-4dac-9f28-755663d5ccf4",
+      "name": "Start Preview Folder Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://docker-proxy:2375/containers/latex-compiler/exec",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"AttachStdout\": true,\n  \"AttachStderr\": true,\n  \"Cmd\": [\n    \"sh\",\n    \"-lc\",\n    \"echo '{{ $('Parse Preview Input').item.json.latexB64 }}' | base64 -d > {{ $('Parse Preview Input').item.json.outputDirectory }}/draft_preview.tex\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        896,
+        384
+      ],
+      "id": "b4a72555-c281-4dc7-9eab-4e6a6488d1d0",
+      "name": "Create Write Preview Tex Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://docker-proxy:2375/exec/{{ $json.Id }}/start",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"Detach\": false,\n  \"Tty\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1120,
+        384
+      ],
+      "id": "8f81e339-5f5e-4288-82d4-10cdfa7455b5",
+      "name": "Start Write Preview Tex Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://docker-proxy:2375/containers/latex-compiler/exec",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"AttachStdout\": true,\n  \"AttachStderr\": true,\n  \"Cmd\": [\n    \"pdflatex\",\n    \"-interaction=nonstopmode\",\n    \"-jobname=preview_resume\",\n    \"-output-directory={{ $('Parse Preview Input').item.json.outputDirectory }}\",\n    \"{{ $('Parse Preview Input').item.json.outputDirectory }}/draft_preview.tex\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1344,
+        384
+      ],
+      "id": "0022c23c-b629-4d48-8d13-b6d78117d18d",
+      "name": "Create Compile Preview Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://docker-proxy:2375/exec/{{ $json.Id }}/start",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"Detach\": false,\n  \"Tty\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1568,
+        384
+      ],
+      "id": "23e77285-e1f2-478f-be42-28d979e820c5",
+      "name": "Start Compile Preview Exec"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Parse Preview Input').item.json;\nconst ts = Date.now();\n\nreturn [{\n  json: {\n    success: true,\n    message: 'Preview compiled successfully',\n    previewUrl: `/applications/${input.companyPath}/${input.jtPath}/preview_resume.pdf?ts=${ts}`\n  }\n}];"
+      },
+      "id": "a146b22e-0589-406d-ada1-2b468476b838",
+      "name": "Build Preview Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2016,
+        384
+      ],
+      "id": "ac61a3e7-7250-4f6f-b2e2-c8f5eede860d",
+      "name": "Respond Preview"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resume-save",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "8a7da492-2618-447e-a940-6b6b24f4ff3c",
+      "name": "Resume Save Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        768
+      ],
+      "webhookId": "resume-save"
+    },
+    {
+      "parameters": {
+        "jsCode": "function fail(msg) { throw new Error(msg); }\n\nconst triggerItem = $items('Resume Save Webhook', 0, 0)[0]?.json || {};\nconst body = triggerItem.body && typeof triggerItem.body === 'object' ? triggerItem.body : triggerItem;\n\nconst company = String(body.company || '').trim();\nconst jt = String(body.jt || '').trim();\nconst latexContent = String(body.latexContent || '').trim();\n\nif (!company) fail('Missing required field: company');\nif (!jt) fail('Missing required field: jt');\nif (!latexContent) fail('Missing required field: latexContent');\n\nconst companyPath = company.replace(/\\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '_');\nconst jtPath = jt.replace(/\\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '_');\nconst outputDirectory = `/apps/${companyPath}/${jtPath}`;\nconst latexB64 = Buffer.from(latexContent, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    company,\n    jt,\n    companyPath,\n    jtPath,\n    outputDirectory,\n    latexB64\n  }\n}];"
+      },
+      "id": "745f0297-27bb-4895-af2c-fa97dd385bdd",
+      "name": "Parse Save Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://docker-proxy:2375/containers/latex-compiler/exec",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"AttachStdout\": true,\n  \"AttachStderr\": true,\n  \"Cmd\": [\n    \"mkdir\",\n    \"-p\",\n    \"{{ $('Parse Save Input').item.json.outputDirectory }}\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        768
+      ],
+      "id": "2678254c-7ece-4869-8601-f40249fb4431",
+      "name": "Create Final Folder Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://docker-proxy:2375/exec/{{ $json.Id }}/start",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"Detach\": false,\n  \"Tty\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        768
+      ],
+      "id": "8daa69e5-55b1-4ed6-a65f-ae0918d7acac",
+      "name": "Start Final Folder Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://docker-proxy:2375/containers/latex-compiler/exec",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"AttachStdout\": true,\n  \"AttachStderr\": true,\n  \"Cmd\": [\n    \"sh\",\n    \"-lc\",\n    \"echo '{{ $('Parse Save Input').item.json.latexB64 }}' | base64 -d > {{ $('Parse Save Input').item.json.outputDirectory }}/Sahu_Aman_Resume.tex\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        896,
+        768
+      ],
+      "id": "b7de2829-c104-4c2b-b54d-701910f85e37",
+      "name": "Create Write Final Tex Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://docker-proxy:2375/exec/{{ $json.Id }}/start",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"Detach\": false,\n  \"Tty\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1120,
+        768
+      ],
+      "id": "0db9999b-8a14-4ea1-aa27-1616fc32ada5",
+      "name": "Start Write Final Tex Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://docker-proxy:2375/containers/latex-compiler/exec",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"AttachStdout\": true,\n  \"AttachStderr\": true,\n  \"Cmd\": [\n    \"pdflatex\",\n    \"-interaction=nonstopmode\",\n    \"-jobname=Sahu_Aman_Resume\",\n    \"-output-directory={{ $('Parse Save Input').item.json.outputDirectory }}\",\n    \"{{ $('Parse Save Input').item.json.outputDirectory }}/Sahu_Aman_Resume.tex\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1344,
+        768
+      ],
+      "id": "fecf6555-3d79-4c06-bbe2-a4a3d222940a",
+      "name": "Create Compile Final Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://docker-proxy:2375/exec/{{ $json.Id }}/start",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"Detach\": false,\n  \"Tty\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1568,
+        768
+      ],
+      "id": "11af5237-42f7-422f-9f6e-00fa38e35f56",
+      "name": "Start Compile Final Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://docker-proxy:2375/containers/latex-compiler/exec",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"AttachStdout\": true,\n  \"AttachStderr\": true,\n  \"Cmd\": [\n    \"rm\",\n    \"-f\",\n    \"{{ $('Parse Save Input').item.json.outputDirectory }}/Sahu_Aman_Resume.aux\",\n    \"{{ $('Parse Save Input').item.json.outputDirectory }}/Sahu_Aman_Resume.log\",\n    \"{{ $('Parse Save Input').item.json.outputDirectory }}/Sahu_Aman_Resume.out\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1792,
+        768
+      ],
+      "id": "a306b647-e4ed-4f39-ae9b-f048abed4480",
+      "name": "Create Cleanup Final Exec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://docker-proxy:2375/exec/{{ $json.Id }}/start",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"Detach\": false,\n  \"Tty\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2016,
+        768
+      ],
+      "id": "e687551e-dd5c-4708-a202-1503dc187da5",
+      "name": "Start Cleanup Final Exec"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Parse Save Input').item.json;\nconst ts = Date.now();\n\nreturn [{\n  json: {\n    success: true,\n    message: 'Final resume saved successfully',\n    outputDirectory: `/apps/${input.companyPath}/${input.jtPath}`,\n    outputPdf: `/apps/${input.companyPath}/${input.jtPath}/Sahu_Aman_Resume.pdf`,\n    outputPdfUrl: `/applications/${input.companyPath}/${input.jtPath}/Sahu_Aman_Resume.pdf?ts=${ts}`,\n    outputTex: `/apps/${input.companyPath}/${input.jtPath}/Sahu_Aman_Resume.tex`\n  }\n}];"
+      },
+      "id": "f985f82f-7380-4b42-be82-2f9dd04314e4",
+      "name": "Build Save Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2464,
+        768
+      ],
+      "id": "5a639da3-2efa-4ad6-aa73-ab2cad32281d",
+      "name": "Respond Save"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Resume Form Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Optimize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Optimize Input": {
+      "main": [
+        [
+          {
+            "node": "Get Base LaTex file output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Base LaTex file output": {
+      "main": [
+        [
+          {
+            "node": "GPT AI Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "GPT AI Call",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "GPT AI Call",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT AI Call": {
+      "main": [
+        [
+          {
+            "node": "Build Draft Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Draft Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Preview Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Preview Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Preview Input": {
+      "main": [
+        [
+          {
+            "node": "Create Preview Folder Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Preview Folder Exec": {
+      "main": [
+        [
+          {
+            "node": "Start Preview Folder Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Preview Folder Exec": {
+      "main": [
+        [
+          {
+            "node": "Create Write Preview Tex Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Write Preview Tex Exec": {
+      "main": [
+        [
+          {
+            "node": "Start Write Preview Tex Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Write Preview Tex Exec": {
+      "main": [
+        [
+          {
+            "node": "Create Compile Preview Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Compile Preview Exec": {
+      "main": [
+        [
+          {
+            "node": "Start Compile Preview Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Compile Preview Exec": {
+      "main": [
+        [
+          {
+            "node": "Build Preview Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Preview Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Save Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Save Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Save Input": {
+      "main": [
+        [
+          {
+            "node": "Create Final Folder Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Final Folder Exec": {
+      "main": [
+        [
+          {
+            "node": "Start Final Folder Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Final Folder Exec": {
+      "main": [
+        [
+          {
+            "node": "Create Write Final Tex Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Write Final Tex Exec": {
+      "main": [
+        [
+          {
+            "node": "Start Write Final Tex Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Write Final Tex Exec": {
+      "main": [
+        [
+          {
+            "node": "Create Compile Final Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Compile Final Exec": {
+      "main": [
+        [
+          {
+            "node": "Start Compile Final Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Compile Final Exec": {
+      "main": [
+        [
+          {
+            "node": "Create Cleanup Final Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Cleanup Final Exec": {
+      "main": [
+        [
+          {
+            "node": "Start Cleanup Final Exec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Cleanup Final Exec": {
+      "main": [
+        [
+          {
+            "node": "Build Save Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Save Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e29c774c-2887-456f-b3ec-ae825f342841",
+  "meta": {
+    "instanceId": "210df4288de1433d76de4f0d78348541970babebd242282118711d36e0bdb289"
+  },
+  "id": "6hvcahPmPi1yHvjU",
+  "tags": []
+}

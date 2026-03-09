@@ -1,0 +1,57 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-resume-builder
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/
+      - NODES_EXCLUDE=[]
+      - N8N_BLOCK_BINARY_DATA_ACCESS=false
+      - N8N_LOCAL_FILES_BASE_PATH=/home/node/
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/home/node/.n8n
+      - ./Resume/Base:/home/node/resumes
+      - ./Resume/Applications:/apps
+
+  latex:
+    build: .
+    container_name: latex-compiler
+    working_dir: /
+    tty: true
+    volumes:
+      - ./Resume/Base:/base
+      - ./Resume/Applications:/apps
+    entrypoint: tail -f /dev/null # Keeps the container running for exec commands in n8n
+
+
+  docker-proxy:
+      image: tecnativa/docker-socket-proxy
+      container_name: docker-proxy
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+      environment:
+        - CONTAINERS=1
+        - EXEC=1
+        - POST=1 # Type of request to allow (GET, POST, etc.)
+      ports:
+        - "2375:2375" # Only expose if your network is private/safe
+
+  frontend:
+    build:
+      context: ./frontend-next
+      dockerfile: Dockerfile
+    container_name: resume-frontend
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./Resume/Base:/resumes:ro
+      - ./Resume/Applications:/applications:ro
+      - ./frontend/default.conf:/etc/nginx/conf.d/default.conf:ro
