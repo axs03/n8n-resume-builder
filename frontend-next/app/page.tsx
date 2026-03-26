@@ -1,7 +1,6 @@
 'use client';
 
 import { useResumeApp } from '@/hooks/useResumeApp';
-import { HealthIndicator } from '@/components/HealthIndicator';
 import { MainScreen } from '@/components/screens/MainScreen';
 import { LoadingScreen } from '@/components/screens/LoadingScreen';
 import { EditorScreen } from '@/components/screens/EditorScreen';
@@ -16,14 +15,10 @@ export default function Page() {
 
   return (
     <>
-      <HealthIndicator type={app.health.type} text={app.health.text} />
-
       <div id="screenViewport">
         <MainScreen
           screenClass={app.screenClasses.main}
-          workflowUrl={app.workflowUrl}
-          onWorkflowUrlChange={app.setWorkflowUrl}
-          onWorkflowUrlBlur={app.handleWorkflowUrlBlur}
+          health={app.health}
           resumeOptions={app.resumeOptions}
           selectedResume={app.selectedResume}
           onSelectedResumeChange={app.setSelectedResume}

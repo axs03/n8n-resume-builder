@@ -1,15 +1,13 @@
 'use client';
 
 import { FileText, History, RefreshCw, Sparkles } from 'lucide-react';
-import type { ResumeOption, HistoryEntry } from '@/types';
+import type { ResumeOption, HistoryEntry, HealthType } from '@/types';
+import { HealthIndicator } from '@/components/HealthIndicator';
 import { HistorySidebar } from '@/components/HistorySidebar';
 
 interface Props {
   screenClass: string;
-
-  workflowUrl: string;
-  onWorkflowUrlChange: (v: string) => void;
-  onWorkflowUrlBlur: () => void;
+  health: { type: HealthType; text: string };
 
   resumeOptions: ResumeOption[];
   selectedResume: string;
@@ -37,9 +35,7 @@ interface Props {
 
 export function MainScreen({
   screenClass,
-  workflowUrl,
-  onWorkflowUrlChange,
-  onWorkflowUrlBlur,
+  health,
   resumeOptions,
   selectedResume,
   onSelectedResumeChange,
@@ -68,6 +64,7 @@ export function MainScreen({
       <div className="main-topbar">
         <FileText size={16} color="var(--accent)" />
         <span className="app-title">Resume Optimizer</span>
+        <HealthIndicator type={health.type} text={health.text} className="inline" />
         <button
           type="button"
           className="secondary"
@@ -94,21 +91,6 @@ export function MainScreen({
               </div>
 
               <div className="form-fields">
-                {/* Webhook URL */}
-                <div className="form-field">
-                  <label htmlFor="workflowUrl">Workflow Webhook URL</label>
-                  <input
-                    id="workflowUrl"
-                    name="workflowUrl"
-                    type="url"
-                    placeholder="https://your-n8n-instance.com/webhook/resume-optimize"
-                    required
-                    value={workflowUrl}
-                    onChange={(e) => onWorkflowUrlChange(e.target.value)}
-                    onBlur={onWorkflowUrlBlur}
-                  />
-                </div>
-
                 {/* Base Resume */}
                 <div className="form-field">
                   <label htmlFor="selectedResume">Base Resume</label>

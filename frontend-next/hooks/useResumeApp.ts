@@ -11,9 +11,9 @@ import type {
   StatusBadgeType,
 } from '@/types';
 import {
-  normalizeWorkflowUrl,
   sanitizePathPart,
   extractTexFilesFromDirectory,
+  extractDirectoryNamesFromDirectory,
 } from '@/lib/utils';
 import {
   apiFetchResumes,
@@ -33,6 +33,8 @@ const INITIAL_SCREEN_CLASSES: ScreenClassMap = {
   result: '',
 };
 
+const WORKFLOW_URL = '/api/resume-optimize';
+
 export function useResumeApp() {
   // ---- Screen transition state ----
   const [activeScreen, setActiveScreen] = useState<ScreenId>('main');
@@ -47,7 +49,6 @@ export function useResumeApp() {
   });
 
   // ---- Main form state ----
-  const [workflowUrl, setWorkflowUrl] = useState('');
   const [resumeOptions, setResumeOptions] = useState<ResumeOption[]>([]);
   const [selectedResume, setSelectedResume] = useState('');
   const [jt, setJt] = useState('');
@@ -82,20 +83,6 @@ export function useResumeApp() {
   // ---- Result state ----
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
   const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ---- Workflow URL refs (for use in stable callbacks) ----
-  const workflowUrlRef = useRef('');
-  useEffect(() => {
-    workflowUrlRef.current = workflowUrl;
-  }, [workflowUrl]);
-
-  // ---- Initialize from localStorage ----
-  useEffect(() => {
-    const saved = localStorage.getItem('resumeWebhookUrl');
-    setWorkflowUrl(
-      normalizeWorkflowUrl(saved ?? `${window.location.origin}/api/resume-optimize`),
-    );
-  }, []);
 
   // ---- Screen transitions ----
 
@@ -139,12 +126,9 @@ export function useResumeApp() {
       setHealth({ type: 'pending', text: 'Backend · Checking' });
     }
     try {
-      const url = normalizeWorkflowUrl(
-        workflowUrlRef.current || localStorage.getItem('resumeWebhookUrl'),
-      );
       const [resumesResult, workflowResult] = await Promise.allSettled([
         fetch('/resumes/', { method: 'GET' }),
-        apiCheckWorkflow(url),
+        apiCheckWorkflow(WORKFLOW_URL),
       ]);
 
       const resumesOk = resumesResult.status === 'fulfilled' && resumesResult.value.ok;
@@ -242,15 +226,52 @@ export function useResumeApp() {
     setHistoryStatus('Loading generated resumes...');
     try {
       const response = await apiFetchHistory();
-
       if (!response.ok) {
         setHistoryEntries([]);
         setHistoryStatus('History is empty.');
         return;
       }
 
-      const payload = await response.json();
-      const entries: HistoryEntry[] = Array.isArray(payload?.entries) ? payload.entries : [];
+      const rootHtml = await response.text();
+      const companyDirs = extractDirectoryNamesFromDirectory(rootHtml);
+
+      const nestedEntries = await Promise.all(
+        companyDirs.map(async (companyDir) => {
+          const companyUrl = `/applications/${encodeURIComponent(companyDir)}/?ts=${Date.now()}`;
+          const companyResponse = await fetch(companyUrl, { method: 'GET' });
+          if (!companyResponse.ok) return [] as HistoryEntry[];
+
+          const companyHtml = await companyResponse.text();
+          const jobDirs = extractDirectoryNamesFromDirectory(companyHtml);
+
+          const jobEntries = await Promise.all(
+            jobDirs.map(async (jobDir) => {
+              const basePath = `/applications/${encodeURIComponent(companyDir)}/${encodeURIComponent(jobDir)}`;
+              const finalPdfUrl = `${basePath}/Sahu_Aman_Resume.pdf?ts=${Date.now()}`;
+              const previewPdfUrl = `${basePath}/preview_resume.pdf?ts=${Date.now()}`;
+
+              const finalPdfExists = await fetch(finalPdfUrl, { method: 'HEAD' }).then((r) => r.ok).catch(() => false);
+              const previewPdfExists = !finalPdfExists
+                ? await fetch(previewPdfUrl, { method: 'HEAD' }).then((r) => r.ok).catch(() => false)
+                : false;
+
+              return {
+                companyName: companyDir.replace(/_/g, ' '),
+                jobTitle: jobDir.replace(/_/g, ' '),
+                folderUrl: `${basePath}/`,
+                pdfUrl: finalPdfExists ? finalPdfUrl : previewPdfExists ? previewPdfUrl : null,
+              } satisfies HistoryEntry;
+            }),
+          );
+
+          return jobEntries;
+        }),
+      );
+
+      const entries: HistoryEntry[] = nestedEntries
+        .flat()
+        .sort((a, b) => `${a.companyName}/${a.jobTitle}`.localeCompare(`${b.companyName}/${b.jobTitle}`));
+
       setHistoryEntries(entries);
       setHistoryStatus(
         entries.length
@@ -273,8 +294,6 @@ export function useResumeApp() {
     setResumeOptions([]);
     setLatexContent('');
     setPreviewSrc('about:blank');
-    const url = normalizeWorkflowUrl(localStorage.getItem('resumeWebhookUrl'));
-    setWorkflowUrl(url);
   }, []);
 
   const backToMain = useCallback(
@@ -324,10 +343,7 @@ export function useResumeApp() {
       e.preventDefault();
       setIsGenerating(true);
 
-      const url = normalizeWorkflowUrl(workflowUrlRef.current);
-      localStorage.setItem('resumeWebhookUrl', url);
-      setWorkflowUrl(url);
-      workflowUrlRef.current = url;
+      const url = WORKFLOW_URL;
 
       switchScreen('loading', 'slide');
       startGenerationProgress();
@@ -476,10 +492,6 @@ export function useResumeApp() {
 
   // ---- Misc handlers ----
 
-  const handleWorkflowUrlBlur = useCallback(() => {
-    setWorkflowUrl((prev) => normalizeWorkflowUrl(prev));
-  }, []);
-
   const toggleHistory = useCallback(() => {
     setIsHistoryCollapsed((prev) => !prev);
   }, []);
@@ -513,8 +525,6 @@ export function useResumeApp() {
     health,
 
     // Main form
-    workflowUrl,
-    setWorkflowUrl,
     resumeOptions,
     selectedResume,
     setSelectedResume,
@@ -528,7 +538,6 @@ export function useResumeApp() {
     isLoadingResumes,
     isGenerating,
     isHistoryCollapsed,
-    handleWorkflowUrlBlur,
     toggleHistory,
     loadResumeOptions,
     handleSubmit,

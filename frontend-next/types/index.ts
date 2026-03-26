@@ -21,4 +21,5 @@ export interface HistoryEntry {
   companyName: string;
   jobTitle: string;
   folderUrl: string;
+  pdfUrl: string | null;
 }

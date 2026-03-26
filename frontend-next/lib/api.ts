@@ -3,7 +3,7 @@ export async function apiFetchResumes() {
 }
 
 export async function apiFetchHistory() {
-  return fetch(`/applications/history.json?ts=${Date.now()}`, { method: 'GET' });
+  return fetch(`/applications/?ts=${Date.now()}`, { method: 'GET' });
 }
 
 export async function apiCheckWorkflow(url: string) {

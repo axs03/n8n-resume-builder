@@ -34,3 +34,16 @@ export function extractTexFilesFromDirectory(
     .filter(Boolean)
     .map((name, index) => ({ index, name }));
 }
+
+export function extractDirectoryNamesFromDirectory(html: string): string[] {
+  if (typeof DOMParser === 'undefined') return [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const links = Array.from(doc.querySelectorAll('a'));
+
+  return links
+    .map((link) => decodeURIComponent(link.getAttribute('href') ?? '').trim())
+    .filter((href) => href.endsWith('/') && href !== '../')
+    .map((href) => href.replace(/\/+$/, ''))
+    .filter(Boolean);
+}

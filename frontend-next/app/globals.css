@@ -126,6 +126,15 @@ h1 {
   pointer-events: none;
 }
 
+.health-indicator.inline {
+  position: static;
+  top: auto;
+  right: auto;
+  z-index: auto;
+  margin-left: 0.65rem;
+  pointer-events: auto;
+}
+
 .health-dot {
   width: 6px;
   height: 6px;
@@ -305,21 +314,22 @@ select {
 }
 
 .main-form-area {
-  padding: 2rem 1.5rem;
+  padding: 2.6rem 2.25rem;
   overflow-y: auto;
   min-height: 0;
 }
 
 .form-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-xl);
-  padding: 1.75rem;
-  max-width: 640px;
+  padding: 2.25rem;
+  max-width: 720px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.8rem;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.3);
 }
 
 .form-card-header h2 {
@@ -339,7 +349,7 @@ select {
 .form-fields {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1.35rem;
 }
 
 .form-field {
@@ -365,8 +375,8 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border);
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .status-text {
@@ -408,6 +418,12 @@ select {
   color: var(--text-3);
 }
 
+.history-header-status {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
 .history-list {
   list-style: none;
   overflow-y: auto;
@@ -420,6 +436,17 @@ select {
   border-radius: var(--radius);
   border: 1px solid transparent;
   transition: background var(--t), border-color var(--t);
+}
+
+.history-item-button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+  display: block;
+  cursor: pointer;
 }
 
 .history-item:hover {
@@ -459,6 +486,75 @@ select {
   font-size: 0.8rem;
   color: var(--text-3);
   line-height: 1.7;
+}
+
+.history-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+}
+
+.history-modal {
+  width: min(980px, 100%);
+  height: min(86dvh, 820px);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.history-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-modal-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.history-modal-subtitle {
+  font-size: 0.76rem;
+  color: var(--text-3);
+}
+
+.history-modal-close {
+  flex-shrink: 0;
+}
+
+.history-modal-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.history-modal-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.history-modal-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--text-2);
 }
 
 /* ─── Editor Screen ─────────────────────────────────────── */
